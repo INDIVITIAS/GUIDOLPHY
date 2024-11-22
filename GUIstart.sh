@@ -1,25 +1,38 @@
 #!/bin/bash
 
-# Обновляем систему
-apt update && apt upgrade -y
+# Обновление системы
+apt-get update && apt-get upgrade -y
 
-# Устанавливаем необходимые пакеты для графического интерфейса и RDP
-apt install -y ubuntu-desktop xrdp lightdm wget unzip curl
+# Установка графического интерфейса и RDP
+apt-get install -y ubuntu-desktop xrdp lightdm
 
-# Настройка xrdp
-systemctl enable xrdp
-systemctl start xrdp
-
-# Устанавливаем и настраиваем графический дисплейный менеджер lightdm
-dpkg-reconfigure lightdm
-systemctl restart lightdm
-
-# Устанавливаем зависимости для работы с Dolphin Anty (AppImage)
-wget https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage -P /tmp/
+# Установка браузера Dolphin Anty
+wget -O /tmp/dolphin-anty-linux-x86_64-latest.AppImage "https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage"
 chmod +x /tmp/dolphin-anty-linux-x86_64-latest.AppImage
 
-# Информируем пользователя о том, как запустить Dolphin Anty
-echo "Dolphin Anty успешно установлен. Для его запуска выполните команду: /tmp/dolphin-anty-linux-x86_64-latest.AppImage"
+# Создание рабочего стола ярлыка (если нужно)
+echo "[Desktop Entry]
+Version=1.0
+Name=Dolphin Anty
+Comment=Dolphin Anty Browser
+Exec=/tmp/dolphin-anty-linux-x86_64-latest.AppImage
+Icon=application-default-icon
+Terminal=false
+Type=Application
+Categories=Network;X-Desktop-App-Install;" > /usr/share/applications/dolphin-anty.desktop
 
-# Сообщение о завершении работы скрипта
-echo "Установка завершена. Пожалуйста, перезагрузите сервер для применения всех изменений."
+# Установка зависимостей для графического интерфейса
+apt-get install -y --no-install-recommends \
+  xorg xserver-xorg-core \
+  dbus-x11 \
+  x11-xserver-utils \
+  openbox
+
+# Перезапуск сервисов для применения изменений
+systemctl restart lightdm
+
+# Информация для пользователя
+echo "Dolphin Anty успешно установлен. Чтобы запустить Dolphin Anty, выполните команду:"
+echo "/tmp/dolphin-anty-linux-x86_64-latest.AppImage"
+echo "или найдите его в меню приложений вашего графического интерфейса."
+echo "Перезагрузите сервер, чтобы завершить настройку и применить изменения."
