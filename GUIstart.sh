@@ -1,55 +1,79 @@
 #!/bin/bash
-set -e
 
-# Устанавливаем графический интерфейс и браузер
-echo "Обновление системы и установка необходимых пакетов..."
-apt update && apt upgrade -y
-apt install -y ubuntu-desktop xrdp lightdm wget curl software-properties-common
-
-# Устанавливаем LightDM как дисплейный менеджер
-echo "Выбор LightDM в качестве дисплейного менеджера..."
-echo "/usr/sbin/lightdm" > /etc/X11/default-display-manager
-dpkg-reconfigure -f noninteractive lightdm
-
-# Определение видеокарты и установка драйверов
-echo "Определение видеокарты и установка драйверов..."
-GPU=$(lspci | grep -E "VGA|3D|Display" || true)
-
-if echo "$GPU" | grep -i "NVIDIA"; then
-    echo "Обнаружена NVIDIA. Устанавливаем драйверы..."
-    apt install -y nvidia-driver-525
-elif echo "$GPU" | grep -i "AMD"; then
-    echo "Обнаружена AMD. Устанавливаем драйверы..."
-    apt install -y xserver-xorg-video-amdgpu
-elif echo "$GPU" | grep -i "Intel"; then
-    echo "Обнаружена Intel. Устанавливаем драйверы..."
-    apt install -y xserver-xorg-video-intel
-else
-    echo "Не удалось определить видеокарту. Устанавливаем универсальные драйверы..."
-    apt install -y xserver-xorg-video-vesa
+# Убедимся, что скрипт запускается от имени root
+if [ "$EUID" -ne 0 ]; then
+  echo "Пожалуйста, запустите скрипт с правами root."
+  exit
 fi
 
-# Установка Dolphin Anty
-echo "Скачивание и установка браузера Dolphin Anty..."
-wget -O /opt/dolphin-anty.AppImage https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage
-chmod +x /opt/dolphin-anty.AppImage
+# Запрос имени пользователя
+read -p "Введите имя нового пользователя (по умолчанию: exuser): " USERNAME
+USERNAME=${USERNAME:-exuser}
 
-# Автоматический запуск Dolphin Anty после входа
-echo "Добавление автозапуска Dolphin Anty..."
-cat <<EOF > /etc/xdg/autostart/dolphin-anty.desktop
+# Запрос пароля пользователя
+read -sp "Введите пароль для пользователя $USERNAME (по умолчанию: ex@Pass9999): " PASSWORD
+PASSWORD=${PASSWORD:-ex@Pass9999}
+echo
+
+# Создание пользователя
+echo "Создаём пользователя $USERNAME с указанным паролем..."
+adduser --quiet --disabled-password --gecos "" "$USERNAME"
+echo "$USERNAME:$PASSWORD" | chpasswd
+usermod -aG sudo,adm "$USERNAME"
+
+# Обновление и установка необходимых пакетов
+echo "Обновляем систему и устанавливаем необходимые пакеты..."
+apt-get update -y && apt-get upgrade -y
+apt-get install -y ubuntu-desktop mmv htop stacer gnome-software xrdp
+
+# Удаление проблемного файла
+echo "Удаляем файл org.freedesktop.color.policy..."
+rm -f /usr/share/polkit-1/actions/org.freedesktop.color.policy
+
+# Настройка порта xrdp
+echo "Изменяем порт xrdp на 53579..."
+sed -i 's/3389/53579/g' /etc/xrdp/xrdp.ini
+
+# Настройка SSH на другой порт
+echo "Изменяем порт SSH на 53572..."
+sed -i 's/#Port 22/Port 53572/g' /etc/ssh/sshd_config
+systemctl restart sshd
+
+# Настройка брандмауэра
+echo "Настраиваем брандмауэр..."
+ufw allow 53572
+ufw allow 53579
+ufw --force enable
+
+# Установка Dolphy Browser
+echo "Скачиваем и устанавливаем Dolphy Browser..."
+wget -q -O /usr/local/bin/dolphin-anty https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage
+chmod +x /usr/local/bin/dolphin-anty
+
+# Создание ярлыка для Dolphy Browser на рабочем столе
+DESKTOP_FILE="/home/$USERNAME/Desktop/Dolphy.desktop"
+echo "Создаём ярлык для Dolphy Browser на рабочем столе..."
+cat <<EOF > "$DESKTOP_FILE"
 [Desktop Entry]
+Version=1.0
 Type=Application
-Exec=/opt/dolphin-anty.AppImage
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-Name=Dolphin Anty
+Name=Dolphy Browser
+Exec=/usr/local/bin/dolphin-anty
+Icon=application-default-icon
+Terminal=false
 EOF
+chmod +x "$DESKTOP_FILE"
+chown "$USERNAME:$USERNAME" "$DESKTOP_FILE"
 
-# Настройка RDP
-echo "Настройка RDP..."
-systemctl enable xrdp
-systemctl start xrdp
-ufw allow 3389/tcp
-
-echo "Установка завершена. Перезагрузите сервер, чтобы применить изменения."
+# Завершение работы скрипта
+echo -e "\n####################################"
+echo "Настройка завершена!"
+echo "Данные для подключения через RDP:"
+echo " - IP-адрес сервера: $(curl -s ifconfig.me)"
+echo " - Порт RDP: 53579"
+echo " - Пользователь: $USERNAME"
+echo " - Пароль: $PASSWORD"
+echo "Автоматическая перезагрузка сервера через 10 секунд..."
+echo "####################################"
+sleep 10
+reboot
