@@ -1,49 +1,25 @@
 #!/bin/bash
 
 # Обновляем систему
-sudo apt-get update -y
-sudo apt-get upgrade -y
+apt update && apt upgrade -y
 
-# Устанавливаем графический интерфейс Ubuntu Desktop
-sudo apt-get install ubuntu-desktop -y
+# Устанавливаем необходимые пакеты для графического интерфейса и RDP
+apt install -y ubuntu-desktop xrdp lightdm wget unzip curl
 
-# Устанавливаем зависимые пакеты
-sudo apt-get install wget curl unzip -y
+# Настройка xrdp
+systemctl enable xrdp
+systemctl start xrdp
 
-# Устанавливаем Firefox (если нужно)
-sudo apt-get install firefox -y
+# Устанавливаем и настраиваем графический дисплейный менеджер lightdm
+dpkg-reconfigure lightdm
+systemctl restart lightdm
 
-# Устанавливаем Stacer (если нужно)
-sudo apt-get install stacer -y
+# Устанавливаем зависимости для работы с Dolphin Anty (AppImage)
+wget https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage -P /tmp/
+chmod +x /tmp/dolphin-anty-linux-x86_64-latest.AppImage
 
-# Устанавливаем xrdp для удаленного доступа
-sudo apt-get install xrdp -y
+# Информируем пользователя о том, как запустить Dolphin Anty
+echo "Dolphin Anty успешно установлен. Для его запуска выполните команду: /tmp/dolphin-anty-linux-x86_64-latest.AppImage"
 
-# Устанавливаем браузер Dolphin Any
-echo "Скачиваем Dolphin Any Browser..."
-wget -O dolphin-anty-latest.AppImage "https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage"
-
-# Даем права на выполнение файла
-chmod +x dolphin-anty-latest.AppImage
-
-# Запускаем приложение Dolphin Any (в фоне)
-./dolphin-anty-latest.AppImage &
-
-# Настроим xrdp для автоматической работы с графическим интерфейсом
-echo "Настроим xrdp для автоматического старта с рабочим столом..."
-
-# Установим lightdm (если не установлен) для автоматической загрузки графической среды
-sudo apt-get install lightdm -y
-
-# Настроим систему для загрузки в графический интерфейс по умолчанию
-sudo systemctl enable lightdm
-
-# Перезапускаем xrdp
-sudo systemctl restart xrdp
-
-# Отключаем root пользователя (опционально)
-sudo passwd --delete --lock root
-
-# Перезагружаем сервер, чтобы все настройки вступили в силу
-echo "Скрипт завершен. Перезагружаем сервер..."
-sudo reboot
+# Сообщение о завершении работы скрипта
+echo "Установка завершена. Пожалуйста, перезагрузите сервер для применения всех изменений."
