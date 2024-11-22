@@ -1,38 +1,55 @@
 #!/bin/bash
+set -e
 
-# Обновление системы
-apt-get update && apt-get upgrade -y
+# Устанавливаем графический интерфейс и браузер
+echo "Обновление системы и установка необходимых пакетов..."
+apt update && apt upgrade -y
+apt install -y ubuntu-desktop xrdp lightdm wget curl software-properties-common
 
-# Установка графического интерфейса и RDP
-apt-get install -y ubuntu-desktop xrdp lightdm
+# Устанавливаем LightDM как дисплейный менеджер
+echo "Выбор LightDM в качестве дисплейного менеджера..."
+echo "/usr/sbin/lightdm" > /etc/X11/default-display-manager
+dpkg-reconfigure -f noninteractive lightdm
 
-# Установка браузера Dolphin Anty
-wget -O /tmp/dolphin-anty-linux-x86_64-latest.AppImage "https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage"
-chmod +x /tmp/dolphin-anty-linux-x86_64-latest.AppImage
+# Определение видеокарты и установка драйверов
+echo "Определение видеокарты и установка драйверов..."
+GPU=$(lspci | grep -E "VGA|3D|Display" || true)
 
-# Создание рабочего стола ярлыка (если нужно)
-echo "[Desktop Entry]
-Version=1.0
-Name=Dolphin Anty
-Comment=Dolphin Anty Browser
-Exec=/tmp/dolphin-anty-linux-x86_64-latest.AppImage
-Icon=application-default-icon
-Terminal=false
+if echo "$GPU" | grep -i "NVIDIA"; then
+    echo "Обнаружена NVIDIA. Устанавливаем драйверы..."
+    apt install -y nvidia-driver-525
+elif echo "$GPU" | grep -i "AMD"; then
+    echo "Обнаружена AMD. Устанавливаем драйверы..."
+    apt install -y xserver-xorg-video-amdgpu
+elif echo "$GPU" | grep -i "Intel"; then
+    echo "Обнаружена Intel. Устанавливаем драйверы..."
+    apt install -y xserver-xorg-video-intel
+else
+    echo "Не удалось определить видеокарту. Устанавливаем универсальные драйверы..."
+    apt install -y xserver-xorg-video-vesa
+fi
+
+# Установка Dolphin Anty
+echo "Скачивание и установка браузера Dolphin Anty..."
+wget -O /opt/dolphin-anty.AppImage https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage
+chmod +x /opt/dolphin-anty.AppImage
+
+# Автоматический запуск Dolphin Anty после входа
+echo "Добавление автозапуска Dolphin Anty..."
+cat <<EOF > /etc/xdg/autostart/dolphin-anty.desktop
+[Desktop Entry]
 Type=Application
-Categories=Network;X-Desktop-App-Install;" > /usr/share/applications/dolphin-anty.desktop
+Exec=/opt/dolphin-anty.AppImage
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Dolphin Anty
+EOF
 
-# Установка зависимостей для графического интерфейса
-apt-get install -y --no-install-recommends \
-  xorg xserver-xorg-core \
-  dbus-x11 \
-  x11-xserver-utils \
-  openbox
+# Настройка RDP
+echo "Настройка RDP..."
+systemctl enable xrdp
+systemctl start xrdp
+ufw allow 3389/tcp
 
-# Перезапуск сервисов для применения изменений
-systemctl restart lightdm
-
-# Информация для пользователя
-echo "Dolphin Anty успешно установлен. Чтобы запустить Dolphin Anty, выполните команду:"
-echo "/tmp/dolphin-anty-linux-x86_64-latest.AppImage"
-echo "или найдите его в меню приложений вашего графического интерфейса."
-echo "Перезагрузите сервер, чтобы завершить настройку и применить изменения."
+echo "Установка завершена. Перезагрузите сервер, чтобы применить изменения."
