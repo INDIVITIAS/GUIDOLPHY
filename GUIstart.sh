@@ -4,7 +4,7 @@
 sudo apt-get update -y
 sudo apt-get upgrade -y
 
-# Устанавливаем графический интерфейс
+# Устанавливаем графический интерфейс Ubuntu Desktop
 sudo apt-get install ubuntu-desktop -y
 
 # Устанавливаем зависимые пакеты
@@ -13,7 +13,7 @@ sudo apt-get install wget curl unzip -y
 # Устанавливаем Firefox (если нужно)
 sudo apt-get install firefox -y
 
-# Устанавливаем приложение Stacer (если нужно)
+# Устанавливаем Stacer (если нужно)
 sudo apt-get install stacer -y
 
 # Устанавливаем xrdp для удаленного доступа
@@ -26,11 +26,24 @@ wget -O dolphin-anty-latest.AppImage "https://app.dolphin-anty-mirror3.net/anty-
 # Даем права на выполнение файла
 chmod +x dolphin-anty-latest.AppImage
 
-# Запускаем приложение
+# Запускаем приложение Dolphin Any (в фоне)
 ./dolphin-anty-latest.AppImage &
+
+# Настроим xrdp для автоматической работы с графическим интерфейсом
+echo "Настроим xrdp для автоматического старта с рабочим столом..."
+
+# Установим lightdm (если не установлен) для автоматической загрузки графической среды
+sudo apt-get install lightdm -y
+
+# Настроим систему для загрузки в графический интерфейс по умолчанию
+sudo systemctl enable lightdm
 
 # Перезапускаем xrdp
 sudo systemctl restart xrdp
 
-# Завершаем установку
-echo "Установка завершена. Используйте xrdp для удаленного доступа."
+# Отключаем root пользователя (опционально)
+sudo passwd --delete --lock root
+
+# Перезагружаем сервер, чтобы все настройки вступили в силу
+echo "Скрипт завершен. Перезагружаем сервер..."
+sudo reboot
