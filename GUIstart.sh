@@ -1,67 +1,56 @@
 #!/bin/bash
 
-# --- Установка необходимых компонентов с минимальным вводом от пользователя ---
+# Запрос имени пользователя
+read -p "Введите имя нового пользователя (по умолчанию: exuser): " username
+username=${username:-exuser}
 
-# Проверяем root-доступ
-if [[ $EUID -ne 0 ]]; then
-    echo "Этот скрипт нужно запускать с правами root."
+# Запрос пароля для пользователя
+read -sp "Введите пароль для пользователя $username (по умолчанию: ex@Pass9999): " password
+password=${password:-ex@Pass9999}
+
+# Создание пользователя
+adduser --quiet --disabled-password --gecos "" $username
+echo "$username:$password" | chpasswd
+
+# Добавление пользователя в группу sudo и adm
+usermod -aG sudo,adm $username
+
+# Обновление системы
+apt-get update && apt-get upgrade -y
+
+# Установка необходимых пакетов
+apt-get install -y ubuntu-desktop mmv htop stacer gnome-software xrdp gdown
+
+# Удаление ненужной политики
+rm /usr/share/polkit-1/actions/org.freedesktop.color.policy
+
+# Изменение настроек xrdp
+sed -i 's/3389/53579/g' /etc/xrdp/xrdp.ini
+sed -i 's/#Port 22/Port 53572/g' /etc/ssh/sshd_config
+
+# Настройка firewall
+ufw allow 53572 && ufw allow 53579 && ufw enable && ufw status numbered
+
+# Скачивание файла Dolphin Anty
+echo "Скачиваем и устанавливаем Dolphin Anty..."
+gdown --id 1_wsgU7Fk0zy9H1K6iEIrptGz78AQxW4W -O /tmp/dolphin-anty-linux-x86_64-latest.AppImage
+
+# Проверка успешности скачивания
+if [ -f /tmp/dolphin-anty-linux-x86_64-latest.AppImage ]; then
+    echo "Файл успешно загружен."
+    chmod +x /tmp/dolphin-anty-linux-x86_64-latest.AppImage
+else
+    echo "Ошибка при загрузке файла Dolphin Anty. Пожалуйста, проверьте интернет-соединение или URL."
     exit 1
 fi
 
-# Запрос имени пользователя и пароля
-read -p "Введите имя нового пользователя (по умолчанию: exuser): " username
-username=${username:-exuser}
-username=$(echo "$username" | tr '[:upper:]' '[:lower:]') # Преобразуем имя пользователя в lowercase
-read -sp "Введите пароль для пользователя $username (по умолчанию: ex@Pass9999): " password
-password=${password:-ex@Pass9999}
-echo ""
+# Создание ярлыка на рабочем столе
+echo -e "[Desktop Entry]\nName=Dolphin Anty\nExec=/tmp/dolphin-anty-linux-x86_64-latest.AppImage\nIcon=dolphin\nTerminal=false\nType=Application" > /home/$username/Desktop/DolphinAnty.desktop
+chmod +x /home/$username/Desktop/DolphinAnty.desktop
+chown $username:$username /home/$username/Desktop/DolphinAnty.desktop
 
-# Создаём пользователя
-echo "Создаём пользователя $username с указанным паролем..."
-useradd -m -s /bin/bash "$username" || { echo "Ошибка создания пользователя!"; exit 1; }
-echo "$username:$password" | chpasswd || { echo "Ошибка установки пароля!"; exit 1; }
-usermod -aG sudo,adm "$username"
-
-# Обновляем систему и устанавливаем необходимые пакеты
-echo "Обновляем систему и устанавливаем необходимые пакеты..."
-apt-get update && apt-get upgrade -y
-apt-get install -y ubuntu-desktop mmv htop stacer gnome-software xrdp
-
-# Удаляем конфликтующий файл polkit
-rm -f /usr/share/polkit-1/actions/org.freedesktop.color.policy
-
-# Настройка портов для XRDP и SSH
-echo "Настраиваем порты XRDP и SSH..."
-sed -i 's/3389/53579/g' /etc/xrdp/xrdp.ini
-sed -i 's/#Port 22/Port 53572/g' /etc/ssh/sshd_config
-ufw allow 53572 && ufw allow 53579
-ufw --force enable
-
-# Создаём файл .xsession для рабочего стола GNOME
-echo "gnome-session" > /home/$username/.xsession
-chown $username:$username /home/$username/.xsession
-
-# Устанавливаем Dolphy браузер
-echo "Устанавливаем Dolphin Anty браузер..."
-curl -fsSL https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage -o /home/$username/DolphinAnty.AppImage
-chmod +x /home/$username/DolphinAnty.AppImage
-ln -s /home/$username/DolphinAnty.AppImage /home/$username/Desktop/DolphinAnty
-chown $username:$username /home/$username/DolphinAnty.AppImage /home/$username/Desktop/DolphinAnty
-
-# Перезапускаем службы
-echo "Перезапускаем службы XRDP и SSH..."
-systemctl restart xrdp
-systemctl restart ssh
-
-# Сообщение об успешной установке
-echo ""
-echo "Установка завершена!"
-echo "Вы можете подключиться через RDP-клиент, используя следующие данные:"
-echo "  - Имя пользователя: $username"
-echo "  - Пароль: $password"
-echo "  - Порт XRDP: 53579"
-echo "  - Порт SSH (при необходимости): 53572"
-echo ""
-echo "Автоматическая перезагрузка через 10 секунд..."
+# Уведомление об успешной установке и перезагрузке
+echo "Dolphin Anty успешно установлен. Ярлык добавлен на рабочий стол."
+echo "Перезагрузка системы через 10 секунд..."
 sleep 10
 reboot
