@@ -19,7 +19,7 @@ usermod -aG sudo,adm $username
 apt-get update && apt-get upgrade -y
 
 # Установка необходимых пакетов
-apt-get install -y ubuntu-desktop mmv htop stacer gnome-software xrdp gdown
+apt-get install -y ubuntu-desktop mmv htop stacer gnome-software xrdp wget
 
 # Удаление ненужной политики
 rm /usr/share/polkit-1/actions/org.freedesktop.color.policy
@@ -33,7 +33,7 @@ ufw allow 53572 && ufw allow 53579 && ufw enable && ufw status numbered
 
 # Скачивание файла Dolphin Anty
 echo "Скачиваем и устанавливаем Dolphin Anty..."
-gdown --id 1_wsgU7Fk0zy9H1K6iEIrptGz78AQxW4W -O /tmp/dolphin-anty-linux-x86_64-latest.AppImage
+wget -O /tmp/dolphin-anty-linux-x86_64-latest.AppImage https://app.dolphin-anty-mirror3.net/anty-app/dolphin-anty-linux-x86_64-latest.AppImage
 
 # Проверка успешности скачивания
 if [ -f /tmp/dolphin-anty-linux-x86_64-latest.AppImage ]; then
