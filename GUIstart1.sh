@@ -33,10 +33,11 @@ sed -i 's/#Port 22/Port 53572/g' /etc/ssh/sshd_config
 # Настройка firewall
 ufw allow 53572 && ufw allow 53579 && ufw enable && ufw status numbered
 
-# Создание Firefox профиля и настройка вкладок
-firefox_profile_dir="/home/$username/.mozilla/firefox"
-su -c "firefox --headless --no-remote & sleep 5; pkill firefox" -s /bin/bash $username # Генерация профиля
+# Принудительный запуск Firefox для создания профиля
+su - $username -c "firefox --headless & sleep 5; pkill firefox"
 
+# Настройка вкладок для Firefox
+firefox_profile_dir="/home/$username/.mozilla/firefox"
 default_profile=$(find "$firefox_profile_dir" -name "*.default*" -type d | head -n 1)
 
 if [ -n "$default_profile" ]; then
