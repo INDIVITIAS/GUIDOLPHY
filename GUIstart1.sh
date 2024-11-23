@@ -33,21 +33,6 @@ sed -i 's/#Port 22/Port 53572/g' /etc/ssh/sshd_config
 # Настройка firewall
 ufw allow 53572 && ufw allow 53579 && ufw enable && ufw status numbered
 
-# Принудительный запуск Firefox для создания профиля
-su - $username -c "firefox --headless & sleep 5; pkill firefox"
-
-# Настройка вкладок для Firefox
-firefox_profile_dir="/home/$username/.mozilla/firefox"
-default_profile=$(find "$firefox_profile_dir" -name "*.default*" -type d | head -n 1)
-
-if [ -n "$default_profile" ]; then
-    echo "user_pref(\"browser.startup.homepage\", \"https://dolphin-anty.com/a/2127109/INDIVITIAS|https://incogniton.com/aff/113505/|https://share.adspower.net/INDIVITIAS|https://www.databasemart.com/?aff_id=043edcb53ec74d3f80aafc2ac322742d|https://dashboard.proxywing.com/billing/aff.php?aff=321|https://dark.shopping/?p=78029\");" >> "$default_profile/prefs.js"
-    echo "user_pref(\"browser.startup.page\", 1);" >> "$default_profile/prefs.js"
-    chown -R $username:$username "$firefox_profile_dir"
-else
-    echo "Не удалось настроить профиль Firefox."
-fi
-
 # Уведомление об успешной установке
 echo ""
 echo "Установка завершена!"
